@@ -413,7 +413,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
 
 	t.Logf("Switch to KMS")
-	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS"}}}`), metav1.PatchOptions{})
+	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS","kms":{"type":"Vault","vault":{"kmsPluginImage":"registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890","vaultAddress":"https://vault.example.com","authentication":{"type":"AppRole","appRole":{"secret":{"name":"vault-approle-secret"}}},"transitKey":"test-transit-key"}}}}}`), metav1.PatchOptions{})
 	require.NoError(t, err)
 	waitForKeys(7)
 	kms8 := kmsProviderName("kubeapiservers", "8")
@@ -426,8 +426,19 @@ func TestEncryptionIntegration(tt *testing.T) {
 	waitForMigration("8")
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
 
+	t.Logf("Verify KMS key secret contains provider config")
+	kmsKeySecret, err := kubeClient.CoreV1().Secrets("openshift-config-managed").Get(ctx, fmt.Sprintf("encryption-key-%s-8", component), metav1.GetOptions{})
+	require.NoError(t, err)
+	kmsProviderConfigData := kmsKeySecret.Data[secrets.EncryptionSecretKMSProviderConfig]
+	require.NotEmpty(t, kmsProviderConfigData, "expected kms-provider-config data to be present in key secret")
+	var providerConfig configv1.KMSConfig
+	require.NoError(t, json.Unmarshal(kmsProviderConfigData, &providerConfig))
+	require.Equal(t, configv1.VaultKMSProvider, providerConfig.Type)
+	require.Equal(t, "https://vault.example.com", providerConfig.Vault.VaultAddress)
+	require.Equal(t, "test-transit-key", providerConfig.Vault.TransitKey)
+
 	t.Logf("Switch back to aescbc from KMS")
-	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"aescbc"}}}`), metav1.PatchOptions{})
+	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"aescbc","kms":null}}}`), metav1.PatchOptions{})
 	require.NoError(t, err)
 	waitForKeys(8)
 	waitForConfigs(
@@ -438,7 +449,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
 
 	t.Logf("Switch back to KMS")
-	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS"}}}`), metav1.PatchOptions{})
+	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS","kms":{"type":"Vault","vault":{"kmsPluginImage":"registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890","vaultAddress":"https://vault.example.com","authentication":{"type":"AppRole","appRole":{"secret":{"name":"vault-approle-secret"}}},"transitKey":"test-transit-key"}}}}}`), metav1.PatchOptions{})
 	require.NoError(t, err)
 	waitForKeys(9)
 	kms10 := kmsProviderName("kubeapiservers", "10")
@@ -452,7 +463,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
 
 	t.Logf("Rotate KMS key via aescbc (KMS->AESCBC->KMS)")
-	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"aescbc"}}}`), metav1.PatchOptions{})
+	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"aescbc","kms":null}}}`), metav1.PatchOptions{})
 	require.NoError(t, err)
 	waitForKeys(10)
 	waitForConfigs(
@@ -463,7 +474,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
 
 	t.Logf("Switch back to KMS after rotation")
-	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS"}}}`), metav1.PatchOptions{})
+	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS","kms":{"type":"Vault","vault":{"kmsPluginImage":"registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890","vaultAddress":"https://vault.example.com","authentication":{"type":"AppRole","appRole":{"secret":{"name":"vault-approle-secret"}}},"transitKey":"test-transit-key"}}}}}`), metav1.PatchOptions{})
 	require.NoError(t, err)
 	waitForKeys(11)
 	kms12 := kmsProviderName("kubeapiservers", "12")
@@ -497,7 +508,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
 
 	t.Logf("Switch to identity from KMS")
-	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"identity"}}}`), metav1.PatchOptions{})
+	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"identity","kms":null}}}`), metav1.PatchOptions{})
 	require.NoError(t, err)
 	waitForKeys(12)
 	waitForConfigs(

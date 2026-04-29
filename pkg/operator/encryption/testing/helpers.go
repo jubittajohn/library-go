@@ -98,7 +98,36 @@ func CreateExpiredMigratedEncryptionKeySecretWithRawKey(targetNS string, grs []s
 	return CreateMigratedEncryptionKeySecretWithRawKey(targetNS, grs, keyID, rawKey, time.Now().Add(-(time.Hour*24*7 + time.Hour)))
 }
 
+var DefaultKMSProviderConfig = &configv1.KMSConfig{
+	Type: configv1.VaultKMSProvider,
+	Vault: configv1.VaultKMSConfig{
+		KMSPluginImage: "registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+		VaultAddress:   "https://vault.example.com",
+		Authentication: configv1.VaultAuthentication{
+			Type: configv1.VaultAuthenticationTypeAppRole,
+			AppRole: configv1.VaultAppRoleAuthentication{
+				Secret: configv1.VaultSecretReference{Name: "vault-approle-secret"},
+			},
+		},
+		TransitKey: "test-transit-key",
+	},
+}
+
 func CreateEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupResource, keyID uint64) *corev1.Secret {
+	return CreateEncryptionKeySecretWithCustomKMSConfig(targetNS, grs, keyID, DefaultKMSProviderConfig)
+}
+
+func CreateMigratedEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupResource, keyID uint64, ts time.Time) *corev1.Secret {
+	secret := CreateEncryptionKeySecretWithKMSConfig(targetNS, grs, keyID)
+	secret.Annotations[encryptionSecretMigratedTimestampForTest] = ts.Format(time.RFC3339)
+	return secret
+}
+
+func CreateExpiredMigratedEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupResource, keyID uint64) *corev1.Secret {
+	return CreateMigratedEncryptionKeySecretWithKMSConfig(targetNS, grs, keyID, time.Now().Add(-(time.Hour*24*7 + time.Hour)))
+}
+
+func CreateEncryptionKeySecretWithCustomKMSConfig(targetNS string, grs []schema.GroupResource, keyID uint64, providerConfig *configv1.KMSConfig) *corev1.Secret {
 	emptyKey := make([]byte, 16)
 	secret := CreateEncryptionKeySecretWithRawKeyWithMode(targetNS, grs, keyID, emptyKey, "KMS")
 	kmsConfig := &apiserverconfigv1.KMSConfiguration{
@@ -112,22 +141,12 @@ func CreateEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupR
 		panic(fmt.Sprintf("failed to encode KMS encryption config: %v", err))
 	}
 	secret.Data[encryptionSecretKMSEncryptionConfigForTest] = encData
-	provData, err := encoding.EncodeKMSConfig(&configv1.KMSConfig{})
+	provData, err := encoding.EncodeKMSConfig(providerConfig)
 	if err != nil {
 		panic(fmt.Sprintf("failed to encode KMS provider config: %v", err))
 	}
 	secret.Data[encryptionSecretKMSProviderConfigForTest] = provData
 	return secret
-}
-
-func CreateMigratedEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupResource, keyID uint64, ts time.Time) *corev1.Secret {
-	secret := CreateEncryptionKeySecretWithKMSConfig(targetNS, grs, keyID)
-	secret.Annotations[encryptionSecretMigratedTimestampForTest] = ts.Format(time.RFC3339)
-	return secret
-}
-
-func CreateExpiredMigratedEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupResource, keyID uint64) *corev1.Secret {
-	return CreateMigratedEncryptionKeySecretWithKMSConfig(targetNS, grs, keyID, time.Now().Add(-(time.Hour*24*7 + time.Hour)))
 }
 
 func CreateDummyKubeAPIPod(name, namespace string, nodeName string) *corev1.Pod {

@@ -14,6 +14,7 @@ import (
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 	clientgotesting "k8s.io/client-go/testing"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/library-go/pkg/operator/encryption/secrets"
 	"github.com/openshift/library-go/pkg/operator/encryption/state"
@@ -25,6 +26,7 @@ const (
 	encryptionSecretMigratedTimestampForTest   = "encryption.apiserver.operator.openshift.io/migrated-timestamp"
 	encryptionSecretMigratedResourcesForTest   = "encryption.apiserver.operator.openshift.io/migrated-resources"
 	encryptionSecretKMSEncryptionConfigForTest = "encryption.apiserver.operator.openshift.io-kms-encryption-config"
+	encryptionSecretKMSProviderConfigForTest   = "encryption.apiserver.operator.openshift.io-kms-provider-config"
 )
 
 func CreateEncryptionKeySecretNoData(targetNS string, grs []schema.GroupResource, keyID uint64) *corev1.Secret {
@@ -106,6 +108,8 @@ func CreateEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupR
 	}
 	kmsConfigJSON, _ := json.Marshal(kmsConfig)
 	secret.Data[encryptionSecretKMSEncryptionConfigForTest] = kmsConfigJSON
+	providerConfigJSON, _ := json.Marshal(&configv1.KMSConfig{})
+	secret.Data[encryptionSecretKMSProviderConfigForTest] = providerConfigJSON
 	return secret
 }
 

@@ -16,6 +16,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/library-go/pkg/operator/encryption/encoding"
 	"github.com/openshift/library-go/pkg/operator/encryption/secrets"
 	"github.com/openshift/library-go/pkg/operator/encryption/state"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
@@ -106,10 +107,16 @@ func CreateEncryptionKeySecretWithKMSConfig(targetNS string, grs []schema.GroupR
 		Endpoint:   fmt.Sprintf("unix:///var/run/kmsplugin/kms-%d.sock", keyID),
 		Timeout:    &metav1.Duration{Duration: 10 * time.Second},
 	}
-	kmsConfigJSON, _ := json.Marshal(kmsConfig)
-	secret.Data[encryptionSecretKMSEncryptionConfigForTest] = kmsConfigJSON
-	providerConfigJSON, _ := json.Marshal(&configv1.KMSConfig{})
-	secret.Data[encryptionSecretKMSProviderConfigForTest] = providerConfigJSON
+	encData, err := encoding.EncodeKMSConfiguration(kmsConfig)
+	if err != nil {
+		panic(fmt.Sprintf("failed to encode KMS encryption config: %v", err))
+	}
+	secret.Data[encryptionSecretKMSEncryptionConfigForTest] = encData
+	provData, err := encoding.EncodeKMSConfig(&configv1.KMSConfig{})
+	if err != nil {
+		panic(fmt.Sprintf("failed to encode KMS provider config: %v", err))
+	}
+	secret.Data[encryptionSecretKMSProviderConfigForTest] = provData
 	return secret
 }
 

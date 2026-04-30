@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	v1 "github.com/openshift/api/config/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -77,7 +77,7 @@ func ToKeyState(s *corev1.Secret) (state.KeyState, error) {
 			return state.KeyState{}, fmt.Errorf("%s can not be empty, when mode is KMS", EncryptionSecretKMSEncryptionConfig)
 		}
 		if v, ok := s.Data[EncryptionSecretKMSProviderConfig]; ok && len(v) > 0 {
-			providerConfig := &v1.KMSConfig{}
+			providerConfig := &configv1.KMSConfig{}
 			if err := json.Unmarshal(v, providerConfig); err != nil {
 				return state.KeyState{}, fmt.Errorf("secret %s/%s has invalid %s data: %w", s.Namespace, s.Name, EncryptionSecretKMSProviderConfig, err)
 			}

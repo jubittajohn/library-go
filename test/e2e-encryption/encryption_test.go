@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -654,8 +653,8 @@ func (d *lockStepDeployer) WaitUntil(stopCh <-chan time.Time) (*apiserverv1.Encr
 
 	select {
 	case s := <-d.configManagedSecretsClient.output:
-		var c apiserverv1.EncryptionConfiguration
-		if err := json.Unmarshal(s.Data["encryption-config"], &c); err != nil {
+		c, err := encoding.DecodeEncryptionConfiguration(s.Data["encryption-config"])
+		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal encryption secret: %v", err)
 		}
 
@@ -663,7 +662,7 @@ func (d *lockStepDeployer) WaitUntil(stopCh <-chan time.Time) (*apiserverv1.Encr
 		defer d.lock.Unlock()
 		d.next = s
 
-		return &c, nil
+		return c, nil
 	case <-stopCh:
 		return nil, fmt.Errorf("timeout")
 	case <-d.stopCh:

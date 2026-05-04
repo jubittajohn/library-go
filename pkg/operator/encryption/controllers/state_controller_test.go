@@ -699,13 +699,13 @@ func TestStateController(t *testing.T) {
 				}(),
 			},
 			expectedActions: []string{"list:pods:kms", "get:secrets:kms"},
-			expectedError:   fmt.Errorf("invalid encryption config kms/encryption-config-1: yaml: control characters are not allowed"),
+			expectedError:   fmt.Errorf("invalid encryption config kms/encryption-config-1: failed to decode EncryptionConfiguration: yaml: control characters are not allowed"),
 			validateOperatorClientFunc: func(ts *testing.T, operatorClient v1helpers.OperatorClient) {
 				expectedCondition := operatorv1.OperatorCondition{
 					Type:    "EncryptionStateControllerDegraded",
 					Status:  "True",
 					Reason:  "Error",
-					Message: "invalid encryption config kms/encryption-config-1: yaml: control characters are not allowed",
+					Message: "invalid encryption config kms/encryption-config-1: failed to decode EncryptionConfiguration: yaml: control characters are not allowed",
 				}
 				encryptiontesting.ValidateOperatorClientConditions(ts, operatorClient, []operatorv1.OperatorCondition{expectedCondition})
 			},

@@ -49,7 +49,10 @@ func TestGetDesiredEncryptionState(t *testing.T) {
 			}
 			expected := expected.DeepCopy()
 			expected.TypeMeta = metav1.TypeMeta{}
-			secretData := encryptiondata.FromEncryptionState(state)
+			secretData, err := encryptiondata.FromEncryptionState(state)
+			if err != nil {
+				ts.Fatalf("unexpected error from FromEncryptionState: %v", err)
+			}
 			if !reflect.DeepEqual(expected, secretData.Encryption) {
 				ts.Errorf("unexpected encryption config (A: expected, B: got):\n%s", diff.ObjectDiff(expected, secretData.Encryption))
 			}

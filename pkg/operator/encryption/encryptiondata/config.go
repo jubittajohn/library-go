@@ -11,6 +11,8 @@ import (
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 	"k8s.io/klog/v2"
 
+	configv1 "github.com/openshift/api/config/v1"
+
 	"github.com/openshift/library-go/pkg/operator/encryption/crypto"
 	"github.com/openshift/library-go/pkg/operator/encryption/secrets"
 	"github.com/openshift/library-go/pkg/operator/encryption/state"
@@ -24,6 +26,9 @@ var (
 // encryption state that doesn't fit into the upstream type.
 type Config struct {
 	Encryption *apiserverconfigv1.EncryptionConfiguration
+	// KMSProviders maps keyID to provider-specific configuration,
+	// carried from Key Secrets into the encryption-config Secret.
+	KMSProviders map[string]*configv1.KMSConfig
 }
 
 func (c *Config) HasEncryptionConfiguration() bool {
@@ -33,12 +38,29 @@ func (c *Config) HasEncryptionConfiguration() bool {
 // FromEncryptionState converts encryption state to Config.
 func FromEncryptionState(encryptionState map[schema.GroupResource]state.GroupResourceState) *Config {
 	resourceConfigs := make([]apiserverconfigv1.ResourceConfiguration, 0, len(encryptionState))
+	var kmsProviders map[string]*configv1.KMSConfig
 
 	for gr, grKeys := range encryptionState {
 		resourceConfigs = append(resourceConfigs, apiserverconfigv1.ResourceConfiguration{
 			Resources: []string{gr.String()}, // we are forced to lose data here because this API is broken
 			Providers: stateToProviders(gr.Resource, grKeys),
 		})
+
+		// Collect KMS provider configs from read keys (which already include the write key).
+		// We iterate over encryptionState which is keyed by GroupResource, so the same
+		// keyID is seen once per resource (e.g. key "1" for secrets and key "1" for configmaps).
+		// Since all resources share the same Key Secret, the provider config is identical
+		// across duplicates and we only need to keep the first occurrence.
+		for _, key := range grKeys.ReadKeys {
+			if key.HasKMSProvider() {
+				if kmsProviders == nil {
+					kmsProviders = map[string]*configv1.KMSConfig{}
+				}
+				if _, exists := kmsProviders[key.Key.Name]; !exists {
+					kmsProviders[key.Key.Name] = key.KMSConfig.Provider
+				}
+			}
+		}
 	}
 
 	// make sure our output is stable
@@ -46,7 +68,10 @@ func FromEncryptionState(encryptionState map[schema.GroupResource]state.GroupRes
 		return resourceConfigs[i].Resources[0] < resourceConfigs[j].Resources[0] // each resource has its own keys
 	})
 
-	return &Config{Encryption: &apiserverconfigv1.EncryptionConfiguration{Resources: resourceConfigs}}
+	return &Config{
+		Encryption:   &apiserverconfigv1.EncryptionConfiguration{Resources: resourceConfigs},
+		KMSProviders: kmsProviders,
+	}
 }
 
 // ToEncryptionState converts config to state.

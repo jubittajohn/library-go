@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/library-go/pkg/operator/encryption/encryptiondata"
 	encryptiontesting "github.com/openshift/library-go/pkg/operator/encryption/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -702,4 +703,111 @@ func newFakeIdentityEncodedKeyForTest() string {
 
 func newFakeIdentityKeyForTest() []byte {
 	return make([]byte, 16)
+}
+
+func TestSecretRoundtrip(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *encryptiondata.Config
+	}{
+		{
+			name: "aescbc without KMS providers",
+			cfg: &encryptiondata.Config{
+				Encryption: &apiserverconfigv1.EncryptionConfiguration{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EncryptionConfiguration",
+						APIVersion: "apiserver.config.k8s.io/v1",
+					},
+					Resources: []apiserverconfigv1.ResourceConfiguration{{
+						Resources: []string{"secrets"},
+						Providers: []apiserverconfigv1.ProviderConfiguration{{
+							AESCBC: &apiserverconfigv1.AESConfiguration{
+								Keys: []apiserverconfigv1.Key{{Name: "1", Secret: "dGVzdA=="}},
+							},
+						}, {
+							Identity: &apiserverconfigv1.IdentityConfiguration{},
+						}},
+					}},
+				},
+			},
+		},
+		{
+			name: "KMS with provider config",
+			cfg: &encryptiondata.Config{
+				Encryption: &apiserverconfigv1.EncryptionConfiguration{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EncryptionConfiguration",
+						APIVersion: "apiserver.config.k8s.io/v1",
+					},
+					Resources: []apiserverconfigv1.ResourceConfiguration{{
+						Resources: []string{"secrets"},
+						Providers: []apiserverconfigv1.ProviderConfiguration{{
+							KMS: &apiserverconfigv1.KMSConfiguration{
+								APIVersion: "v2",
+								Name:       "1_secrets",
+								Endpoint:   "unix:///var/run/kmsplugin/kms-1.sock",
+								Timeout:    &metav1.Duration{Duration: 10 * time.Second},
+							},
+						}, {
+							Identity: &apiserverconfigv1.IdentityConfiguration{},
+						}},
+					}},
+				},
+				KMSProviders: map[string]*configv1.KMSConfig{
+					"1": encryptiontesting.DefaultKMSProviderConfig,
+				},
+			},
+		},
+		{
+			name: "KMS with multiple provider configs",
+			cfg: &encryptiondata.Config{
+				Encryption: &apiserverconfigv1.EncryptionConfiguration{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EncryptionConfiguration",
+						APIVersion: "apiserver.config.k8s.io/v1",
+					},
+					Resources: []apiserverconfigv1.ResourceConfiguration{{
+						Resources: []string{"secrets"},
+						Providers: []apiserverconfigv1.ProviderConfiguration{{
+							KMS: &apiserverconfigv1.KMSConfiguration{
+								APIVersion: "v2",
+								Name:       "2_secrets",
+								Endpoint:   "unix:///var/run/kmsplugin/kms-2.sock",
+								Timeout:    &metav1.Duration{Duration: 10 * time.Second},
+							},
+						}, {
+							KMS: &apiserverconfigv1.KMSConfiguration{
+								APIVersion: "v2",
+								Name:       "1_secrets",
+								Endpoint:   "unix:///var/run/kmsplugin/kms-1.sock",
+								Timeout:    &metav1.Duration{Duration: 10 * time.Second},
+							},
+						}, {
+							Identity: &apiserverconfigv1.IdentityConfiguration{},
+						}},
+					}},
+				},
+				KMSProviders: map[string]*configv1.KMSConfig{
+					"1": encryptiontesting.DefaultKMSProviderConfig,
+					"2": encryptiontesting.DefaultKMSProviderConfig,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := encryptiondata.ToSecret("openshift-config-managed", "encryption-config-test", tt.cfg)
+			if err != nil {
+				t.Fatalf("ToSecret() error: %v", err)
+			}
+			got, err := encryptiondata.FromSecret(secret)
+			if err != nil {
+				t.Fatalf("FromSecret() error: %v", err)
+			}
+			if !cmp.Equal(tt.cfg, got) {
+				t.Errorf("roundtrip mismatch:\n%s", cmp.Diff(tt.cfg, got))
+			}
+		})
+	}
 }

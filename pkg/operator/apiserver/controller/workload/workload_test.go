@@ -95,7 +95,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/: could not be retrieved",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -112,7 +112,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 					{
 						Type:    fmt.Sprintf("%sWorkloadDegraded", defaultControllerName),
 						Status:  operatorv1.ConditionTrue,
-						Message: "nasty error\n",
+						Message: "nasty error",
 						Reason:  "SyncError",
 					},
 					{
@@ -129,7 +129,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/: could not be retrieved",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -140,7 +140,6 @@ func TestUpdateOperatorStatus(t *testing.T) {
 					Namespace: "openshift-apiserver",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}},
 					Replicas: ptr.To[int32](3),
 				},
 				Status: appsv1.DeploymentStatus{
@@ -152,7 +151,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 			},
 			pods: []*corev1.Pod{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "apiserver", Namespace: "openshift-apiserver", Labels: map[string]string{"foo": "bar"}},
+					ObjectMeta: metav1.ObjectMeta{Name: "apiserver", Namespace: "openshift-apiserver"},
 					Status: corev1.PodStatus{
 						Phase: corev1.PodPending,
 						ContainerStatuses: []corev1.ContainerStatus{
@@ -203,7 +202,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/apiserver.openshift-apiserver: 0/3 pods have been updated to the latest generation and 0/3 pods are available",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -214,7 +213,6 @@ func TestUpdateOperatorStatus(t *testing.T) {
 					Namespace: "openshift-apiserver",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}},
 					Replicas: ptr.To[int32](3),
 				},
 				Status: appsv1.DeploymentStatus{
@@ -226,7 +224,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 			},
 			pods: []*corev1.Pod{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "apiserver", Namespace: "openshift-apiserver", Labels: map[string]string{"foo": "bar"}},
+					ObjectMeta: metav1.ObjectMeta{Name: "apiserver", Namespace: "openshift-apiserver"},
 					Status: corev1.PodStatus{
 						Phase: corev1.PodPending,
 						ContainerStatuses: []corev1.ContainerStatus{
@@ -276,7 +274,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/apiserver.openshift-apiserver: 0/3 pods have been updated to the latest generation and 0/3 pods are available",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -287,7 +285,6 @@ func TestUpdateOperatorStatus(t *testing.T) {
 					Namespace: "openshift-apiserver",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}},
 					Replicas: ptr.To[int32](3),
 				},
 				Status: appsv1.DeploymentStatus{
@@ -343,7 +340,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -389,7 +386,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -439,7 +436,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/apiserver.openshift-apiserver: observed generation is 99, desired generation is 100.",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 
@@ -490,7 +487,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/apiserver.openshift-apiserver: observed generation is 99, desired generation is 100.",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -523,7 +520,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "the operator didn't specify what preconditions are missing",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -573,7 +570,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/apiserver.openshift-apiserver: 1/3 pods have been updated to the latest generation and 2/3 pods are available",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -624,7 +621,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Reason: "AsExpected",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 		{
@@ -635,8 +632,6 @@ func TestUpdateOperatorStatus(t *testing.T) {
 					Namespace: "openshift-apiserver",
 				},
 				Spec: appsv1.DeploymentSpec{
-					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
-					Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar"}}},
 					Replicas: ptr.To[int32](3),
 				},
 				Status: appsv1.DeploymentStatus{
@@ -673,7 +668,7 @@ func TestUpdateOperatorStatus(t *testing.T) {
 						Message: "deployment/apiserver.openshift-apiserver: 3/3 pods have been updated to the latest generation and 2/3 pods are available",
 					},
 				}
-				return areCondidtionsEqual(expectedConditions, actualStatus.Conditions)
+				return areConditionsEqual(expectedConditions, actualStatus.Conditions)
 			},
 		},
 	}
@@ -756,7 +751,7 @@ func (f *fakePodLister) Pods(namespace string) corev1listers.PodNamespaceLister 
 	}
 }
 
-func areCondidtionsEqual(expectedConditions []operatorv1.OperatorCondition, actualConditions []operatorv1.OperatorCondition) error {
+func areConditionsEqual(expectedConditions []operatorv1.OperatorCondition, actualConditions []operatorv1.OperatorCondition) error {
 	if len(expectedConditions) != len(actualConditions) {
 		return fmt.Errorf("expected %d conditions but got %d", len(expectedConditions), len(actualConditions))
 	}

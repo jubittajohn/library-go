@@ -657,7 +657,10 @@ func TestFromEncryptionState(t *testing.T) {
 				}
 				grState[gr] = ks
 			}
-			actualOutput := encryptiondata.FromEncryptionState(grState)
+			actualOutput, err := encryptiondata.FromEncryptionState(grState)
+			if err != nil {
+				t.Fatalf("unexpected error from FromEncryptionState: %v", err)
+			}
 			expectedOutput := scenario.makeOutput(scenario.writeKeyIn, scenario.readKeysIn)
 
 			if !cmp.Equal(expectedOutput, actualOutput.Encryption.Resources) {
@@ -703,6 +706,96 @@ func newFakeIdentityEncodedKeyForTest() string {
 
 func newFakeIdentityKeyForTest() []byte {
 	return make([]byte, 16)
+}
+
+func TestFromEncryptionStateKMSProviderConfigValidation(t *testing.T) {
+	tests := []struct {
+		name            string
+		encryptionState map[schema.GroupResource]state.GroupResourceState
+		expectedErr     string
+	}{
+		{
+			name: "matching provider configs across resources",
+			encryptionState: map[schema.GroupResource]state.GroupResourceState{
+				{Resource: "secrets"}: {
+					ReadKeys: []state.KeyState{{
+						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
+						Mode: state.KMS,
+						KMSConfig: &state.KMSConfig{
+							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
+							Provider:   encryptiontesting.DefaultKMSProviderConfig,
+						},
+					}},
+				},
+				{Resource: "configmaps"}: {
+					ReadKeys: []state.KeyState{{
+						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
+						Mode: state.KMS,
+						KMSConfig: &state.KMSConfig{
+							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
+							Provider:   encryptiontesting.DefaultKMSProviderConfig,
+						},
+					}},
+				},
+			},
+		},
+		{
+			name: "mismatched provider configs across resources",
+			encryptionState: map[schema.GroupResource]state.GroupResourceState{
+				{Resource: "secrets"}: {
+					ReadKeys: []state.KeyState{{
+						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
+						Mode: state.KMS,
+						KMSConfig: &state.KMSConfig{
+							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
+							Provider: &configv1.KMSConfig{
+								Type: configv1.VaultKMSProvider,
+								Vault: configv1.VaultKMSConfig{
+									VaultAddress: "https://vault-a.example.com",
+									TransitKey:   "key-a",
+								},
+							},
+						},
+					}},
+				},
+				{Resource: "configmaps"}: {
+					ReadKeys: []state.KeyState{{
+						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
+						Mode: state.KMS,
+						KMSConfig: &state.KMSConfig{
+							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
+							Provider: &configv1.KMSConfig{
+								Type: configv1.VaultKMSProvider,
+								Vault: configv1.VaultKMSConfig{
+									VaultAddress: "https://vault-b.example.com",
+									TransitKey:   "key-b",
+								},
+							},
+						},
+					}},
+				},
+			},
+			expectedErr: `KMS provider config mismatch for keyID 1: configs from different resources must be identical`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := encryptiondata.FromEncryptionState(tt.encryptionState)
+			if tt.expectedErr != "" {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if err.Error() != tt.expectedErr {
+					t.Fatalf("unexpected error:\n  got:      %v\n  expected: %v", err, tt.expectedErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
 }
 
 func TestSecretRoundtrip(t *testing.T) {

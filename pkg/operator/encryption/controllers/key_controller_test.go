@@ -44,7 +44,7 @@ func TestKeyController(t *testing.T) {
 	apiServerWithAESGCM.Spec.Encryption = configv1.APIServerEncryption{Type: "aesgcm"}
 
 	apiServerWithKMS := simpleAPIServer.DeepCopy()
-	apiServerWithKMS.Spec.Encryption = configv1.APIServerEncryption{Type: "KMS", KMS: encryptiontesting.DefaultKMSProviderConfig}
+	apiServerWithKMS.Spec.Encryption = configv1.APIServerEncryption{Type: "KMS", KMS: encryptiontesting.DefaultKMSPluginConfig}
 
 	scenarios := []struct {
 		name                     string
@@ -371,14 +371,14 @@ func TestKeyController(t *testing.T) {
 							ts.Errorf("unexpected kms-encryption-config: %s", kmsConfigData)
 						}
 
-						// Verify KMS provider config content
-						kmsProviderConfigData := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-provider-config"]
-						expectedProviderConfig, err := encoding.EncodeKMSConfig(encryptiontesting.DefaultKMSProviderConfig)
+						// Verify KMS plugin config content
+						kmsPluginConfigData := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-plugin-config"]
+						expectedPluginConfig, err := encoding.EncodeKMSPluginConfig(encryptiontesting.DefaultKMSPluginConfig)
 						if err != nil {
 							ts.Fatalf("failed to encode KMS config: %v", err)
 						}
-						if string(kmsProviderConfigData) != string(expectedProviderConfig) {
-							ts.Errorf("unexpected kms-provider-config: %s", kmsProviderConfigData)
+						if string(kmsPluginConfigData) != string(expectedPluginConfig) {
+							ts.Errorf("unexpected kms-plugin-config: %s", kmsPluginConfigData)
 						}
 
 						// Verify internal reason
@@ -403,7 +403,7 @@ func TestKeyController(t *testing.T) {
 			},
 			initialObjects: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+				encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
 			},
 			apiServerObjects: []runtime.Object{apiServerWithKMS},
 			targetNamespace:  "kms",
@@ -449,14 +449,14 @@ func TestKeyController(t *testing.T) {
 							ts.Errorf("unexpected kms-encryption-config: %s", kmsConfigData)
 						}
 
-						// Verify KMS provider config content
-						kmsProviderConfigData := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-provider-config"]
-						expectedProviderConfig, err := encoding.EncodeKMSConfig(encryptiontesting.DefaultKMSProviderConfig)
+						// Verify KMS plugin config content
+						kmsPluginConfigData := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-plugin-config"]
+						expectedPluginConfig, err := encoding.EncodeKMSPluginConfig(encryptiontesting.DefaultKMSPluginConfig)
 						if err != nil {
 							ts.Fatalf("failed to encode KMS config: %v", err)
 						}
-						if string(kmsProviderConfigData) != string(expectedProviderConfig) {
-							ts.Errorf("unexpected kms-provider-config: %s", kmsProviderConfigData)
+						if string(kmsPluginConfigData) != string(expectedPluginConfig) {
+							ts.Errorf("unexpected kms-plugin-config: %s", kmsPluginConfigData)
 						}
 
 						// Verify internal reason is mode changed
@@ -481,8 +481,8 @@ func TestKeyController(t *testing.T) {
 			},
 			initialObjects: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateExpiredMigratedEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 5),
-				encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 6),
+				encryptiontesting.CreateExpiredMigratedEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 5),
+				encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 6),
 			},
 			apiServerObjects: []runtime.Object{apiServerWithKMS},
 			targetNamespace:  "kms",
@@ -496,7 +496,7 @@ func TestKeyController(t *testing.T) {
 			},
 			initialObjects: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 3),
+				encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 3),
 			},
 			apiServerObjects: []runtime.Object{apiServerWithKMS},
 			targetNamespace:  "kms",
@@ -543,14 +543,14 @@ func TestKeyController(t *testing.T) {
 							ts.Errorf("unexpected kms-encryption-config: %s", kmsConfigData)
 						}
 
-						// Verify KMS provider config content
-						kmsProviderConfigData := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-provider-config"]
-						expectedProviderConfig, err := encoding.EncodeKMSConfig(encryptiontesting.DefaultKMSProviderConfig)
+						// Verify KMS plugin config content
+						kmsPluginConfigData := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-plugin-config"]
+						expectedPluginConfig, err := encoding.EncodeKMSPluginConfig(encryptiontesting.DefaultKMSPluginConfig)
 						if err != nil {
 							ts.Fatalf("failed to encode KMS config: %v", err)
 						}
-						if string(kmsProviderConfigData) != string(expectedProviderConfig) {
-							ts.Errorf("unexpected kms-provider-config: %s", kmsProviderConfigData)
+						if string(kmsPluginConfigData) != string(expectedPluginConfig) {
+							ts.Errorf("unexpected kms-plugin-config: %s", kmsPluginConfigData)
 						}
 
 						// Verify internal reason is mode changed
@@ -580,7 +580,7 @@ func TestKeyController(t *testing.T) {
 			},
 			initialObjects: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 7),
+				encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 7),
 			},
 			apiServerObjects: []runtime.Object{apiServerWithAESCBC},
 			targetNamespace:  "kms",
@@ -602,9 +602,9 @@ func TestKeyController(t *testing.T) {
 							ts.Errorf("expected kms-encryption-config data to be absent, got: %s", kmsConfigData)
 						}
 
-						// Verify KMS provider config is not present for AESCBC
-						if kmsProviderConfigData, exists := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-provider-config"]; exists {
-							ts.Errorf("expected kms-provider-config data to be absent, got: %s", kmsProviderConfigData)
+						// Verify KMS plugin config is not present for AESCBC
+						if kmsPluginConfigData, exists := actualSecret.Data["encryption.apiserver.operator.openshift.io-kms-plugin-config"]; exists {
+							ts.Errorf("expected kms-plugin-config data to be absent, got: %s", kmsPluginConfigData)
 						}
 
 						// Verify internal reason is mode changed
@@ -786,9 +786,9 @@ func TestGetCurrentModeReasonAndEncryptionConfig(t *testing.T) {
 		},
 		{
 			name: "kms encryption mode",
-			apiServerObjects: []runtime.Object{&configv1.APIServer{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Spec: configv1.APIServerSpec{Encryption: configv1.APIServerEncryption{Type: "KMS", KMS: &configv1.KMSConfig{
+			apiServerObjects: []runtime.Object{&configv1.APIServer{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Spec: configv1.APIServerSpec{Encryption: configv1.APIServerEncryption{Type: "KMS", KMS: configv1.KMSPluginConfig{
 				Type: configv1.VaultKMSProvider,
-				Vault: configv1.VaultKMSConfig{
+				Vault: configv1.VaultKMSPluginConfig{
 					KMSPluginImage: "registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 					VaultAddress:   "https://vault.example.com",
 					Authentication: configv1.VaultAuthentication{
@@ -827,8 +827,8 @@ func TestGetCurrentModeReasonAndEncryptionConfig(t *testing.T) {
 			if externalReason != scenario.expectedReasonFromCfg {
 				t.Errorf("unexpected reason read from the config: %q, expected: %q", externalReason, scenario.expectedReasonFromCfg)
 			}
-			if currentMode == "KMS" && encryption.KMS == nil {
-				t.Errorf("expected non-nil KMS config when mode is KMS")
+			if currentMode == "KMS" && encryption.KMS == (configv1.KMSPluginConfig{}) {
+				t.Errorf("expected non-empty KMS config when mode is KMS")
 			}
 		})
 	}

@@ -1006,7 +1006,7 @@ func TestGetDesiredEncryptionState(t *testing.T) {
 				nil,
 				"kms",
 				[]*corev1.Secret{
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
 				},
 				[]schema.GroupResource{{Group: "", Resource: "secrets"}},
 			},
@@ -1048,7 +1048,7 @@ func TestGetDesiredEncryptionState(t *testing.T) {
 				"kms",
 				[]*corev1.Secret{
 					encryptiontesting.CreateEncryptionKeySecretWithRawKey("kms", nil, 1, []byte("11ea7c91419a68fd1224f88d50316b4e")),
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
 				},
 				[]schema.GroupResource{{Group: "", Resource: "secrets"}},
 			},
@@ -1104,8 +1104,8 @@ func TestGetDesiredEncryptionState(t *testing.T) {
 				}),
 				"kms",
 				[]*corev1.Secret{
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
 				},
 				[]schema.GroupResource{{Group: "", Resource: "secrets"}},
 			},
@@ -1161,8 +1161,8 @@ func TestGetDesiredEncryptionState(t *testing.T) {
 				}),
 				"kms",
 				[]*corev1.Secret{
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
 				},
 				[]schema.GroupResource{{Group: "", Resource: "secrets"}},
 			},
@@ -1217,7 +1217,7 @@ func TestGetDesiredEncryptionState(t *testing.T) {
 				"kms",
 				[]*corev1.Secret{
 					encryptiontesting.CreateEncryptionKeySecretWithRawKey("kms", nil, 1, []byte("21ea7c91419a68fd1224f88d50316b4e")),
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
 				},
 				[]schema.GroupResource{{Group: "", Resource: "secrets"}},
 			},
@@ -1271,7 +1271,7 @@ func TestGetDesiredEncryptionState(t *testing.T) {
 				}),
 				"kms",
 				[]*corev1.Secret{
-					encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+					encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
 					encryptiontesting.CreateEncryptionKeySecretWithRawKey("kms", nil, 2, []byte("21ea7c91419a68fd1224f88d50316b4e")),
 				},
 				[]schema.GroupResource{{Group: "", Resource: "secrets"}},

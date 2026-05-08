@@ -15,9 +15,9 @@ import (
 	"github.com/openshift/library-go/pkg/operator/encryption/state"
 )
 
-var defaultKMSProviderConfig = &configv1.KMSConfig{
+var defaultKMSPluginConfig = configv1.KMSPluginConfig{
 	Type: configv1.VaultKMSProvider,
-	Vault: configv1.VaultKMSConfig{
+	Vault: configv1.VaultKMSPluginConfig{
 		KMSPluginImage: "registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 		VaultAddress:   "https://vault.example.com",
 		Authentication: configv1.VaultAuthentication{
@@ -140,14 +140,14 @@ func TestRoundtrip(t *testing.T) {
 				},
 				Backed: true,
 				Mode:   "KMS",
-				KMSConfig: &state.KMSConfig{
+				KMS: &state.KMSState{
 					Encryption: &v1.KMSConfiguration{
 						APIVersion: "v2",
 						Name:       "1",
 						Endpoint:   "unix:///var/run/kmsplugin/kms-1.sock",
 						Timeout:    &metav1.Duration{Duration: 10 * time.Second},
 					},
-					Provider: defaultKMSProviderConfig,
+					Plugin: defaultKMSPluginConfig,
 				},
 				Migrated: state.MigrationState{
 					Timestamp: now,
@@ -171,14 +171,14 @@ func TestRoundtrip(t *testing.T) {
 				},
 				Backed: true,
 				Mode:   "KMS",
-				KMSConfig: &state.KMSConfig{
+				KMS: &state.KMSState{
 					Encryption: &v1.KMSConfiguration{
 						APIVersion: "v2",
 						Name:       "2",
 						Endpoint:   "unix:///var/run/kmsplugin/kms-2.sock",
 						Timeout:    &metav1.Duration{Duration: 10 * time.Second},
 					},
-					Provider: defaultKMSProviderConfig,
+					Plugin: defaultKMSPluginConfig,
 				},
 			},
 		},

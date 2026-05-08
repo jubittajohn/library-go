@@ -722,7 +722,7 @@ func TestStateController(t *testing.T) {
 			},
 			initialResources: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+				encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
 			},
 			expectedActions: []string{"list:pods:kms", "get:secrets:kms", "list:secrets:openshift-config-managed", "get:secrets:openshift-config-managed", "create:secrets:openshift-config-managed", "create:events:kms", "create:events:kms"},
 			expectedEncryptionCfg: &encryptiondata.Config{
@@ -745,7 +745,7 @@ func TestStateController(t *testing.T) {
 						}},
 					}},
 				},
-				KMSProviders: map[string]*configv1.KMSConfig{"1": encryptiontesting.DefaultKMSProviderConfig},
+				KMSPlugins: map[string]configv1.KMSPluginConfig{"1": encryptiontesting.DefaultKMSPluginConfig},
 			},
 			validateFunc: func(ts *testing.T, actions []clientgotesting.Action, destName string, expectedEncryptionCfg *encryptiondata.Config) {
 				wasSecretValidated := false
@@ -776,7 +776,7 @@ func TestStateController(t *testing.T) {
 			},
 			initialResources: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateMigratedEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1, time.Now()),
+				encryptiontesting.CreateMigratedEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1, time.Now()),
 				func() *corev1.Secret {
 					ec := &encryptiondata.Config{Encryption: &apiserverconfigv1.EncryptionConfiguration{
 						Resources: []apiserverconfigv1.ResourceConfiguration{{
@@ -817,7 +817,7 @@ func TestStateController(t *testing.T) {
 						}},
 					}},
 				},
-				KMSProviders: map[string]*configv1.KMSConfig{"1": encryptiontesting.DefaultKMSProviderConfig},
+				KMSPlugins: map[string]configv1.KMSPluginConfig{"1": encryptiontesting.DefaultKMSPluginConfig},
 			},
 			expectedActions: []string{
 				"list:pods:kms",
@@ -857,7 +857,7 @@ func TestStateController(t *testing.T) {
 			},
 			initialResources: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateMigratedEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1, time.Now()),
+				encryptiontesting.CreateMigratedEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1, time.Now()),
 				func() *corev1.Secret {
 					ec := &encryptiondata.Config{
 						Encryption: &apiserverconfigv1.EncryptionConfiguration{
@@ -875,7 +875,7 @@ func TestStateController(t *testing.T) {
 								}},
 							}},
 						},
-						KMSProviders: map[string]*configv1.KMSConfig{"1": encryptiontesting.DefaultKMSProviderConfig},
+						KMSPlugins: map[string]configv1.KMSPluginConfig{"1": encryptiontesting.DefaultKMSPluginConfig},
 					}
 					ecs := createEncryptionCfgSecret(t, "kms", "1", ec)
 					return ecs
@@ -897,7 +897,7 @@ func TestStateController(t *testing.T) {
 								}},
 							}},
 						},
-						KMSProviders: map[string]*configv1.KMSConfig{"1": encryptiontesting.DefaultKMSProviderConfig},
+						KMSPlugins: map[string]configv1.KMSPluginConfig{"1": encryptiontesting.DefaultKMSPluginConfig},
 					}
 					ecs := createEncryptionCfgSecret(t, "openshift-config-managed", "1", ec)
 					ecs.Name = "encryption-config-kms"
@@ -916,10 +916,10 @@ func TestStateController(t *testing.T) {
 			},
 			initialResources: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
-				encryptiontesting.CreateExpiredMigratedEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
-				encryptiontesting.CreateEncryptionKeySecretWithCustomKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2, &configv1.KMSConfig{
+				encryptiontesting.CreateExpiredMigratedEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+				encryptiontesting.CreateEncryptionKeySecretWithCustomKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2, configv1.KMSPluginConfig{
 					Type: configv1.VaultKMSProvider,
-					Vault: configv1.VaultKMSConfig{
+					Vault: configv1.VaultKMSPluginConfig{
 						KMSPluginImage: "registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 						VaultAddress:   "https://vault2.example.com",
 						Authentication: configv1.VaultAuthentication{
@@ -1012,11 +1012,11 @@ func TestStateController(t *testing.T) {
 						}},
 					}},
 				},
-				KMSProviders: map[string]*configv1.KMSConfig{
-					"1": encryptiontesting.DefaultKMSProviderConfig,
+				KMSPlugins: map[string]configv1.KMSPluginConfig{
+					"1": encryptiontesting.DefaultKMSPluginConfig,
 					"2": {
 						Type: configv1.VaultKMSProvider,
-						Vault: configv1.VaultKMSConfig{
+						Vault: configv1.VaultKMSPluginConfig{
 							KMSPluginImage: "registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 							VaultAddress:   "https://vault2.example.com",
 							Authentication: configv1.VaultAuthentication{
@@ -1069,7 +1069,7 @@ func TestStateController(t *testing.T) {
 			initialResources: []runtime.Object{
 				encryptiontesting.CreateDummyKubeAPIPod("kube-apiserver-1", "kms", "node-1"),
 				encryptiontesting.CreateEncryptionKeySecretWithRawKey("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1, []byte("61def964fb967f5d7c44a2af8dab6865")),
-				encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
+				encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
 				func() *corev1.Secret { // encryption config in kms namespace
 					keysRes := encryptiondatatesting.EncryptionKeysResourceTuple{
 						Resource: "secrets",
@@ -1127,9 +1127,9 @@ func TestStateController(t *testing.T) {
 						}},
 					}},
 				},
-				KMSProviders: map[string]*configv1.KMSConfig{"2": {
+				KMSPlugins: map[string]configv1.KMSPluginConfig{"2": {
 					Type: configv1.VaultKMSProvider,
-					Vault: configv1.VaultKMSConfig{
+					Vault: configv1.VaultKMSPluginConfig{
 						KMSPluginImage: "registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 						VaultAddress:   "https://vault.example.com",
 						Authentication: configv1.VaultAuthentication{

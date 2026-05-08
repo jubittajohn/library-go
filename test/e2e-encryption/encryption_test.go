@@ -266,7 +266,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 		require.NoError(t, err)
 	}
 
-	verifyKMSProviders := func() {
+	verifyKMSPlugins := func() {
 		t.Helper()
 		encryptionConfigSecret, err := kubeClient.CoreV1().Secrets("openshift-config-managed").Get(ctx, fmt.Sprintf("encryption-config-%s", component), metav1.GetOptions{})
 		require.NoError(t, err)
@@ -285,22 +285,22 @@ func TestEncryptionIntegration(tt *testing.T) {
 		}
 
 		for keyID := range expectedKeyIDs {
-			providerConfig, ok := cfg.KMSProviders[keyID]
+			pluginConfig, ok := cfg.KMSPlugins[keyID]
 			if !ok {
-				t.Fatalf("expected kms-provider-config for keyID %s but not found in encryption-config secret", keyID)
+				t.Fatalf("expected kms-plugin-config for keyID %s but not found in encryption-config secret", keyID)
 			}
 
 			keySecret, err := kubeClient.CoreV1().Secrets("openshift-config-managed").Get(ctx, fmt.Sprintf("encryption-key-%s-%s", component, keyID), metav1.GetOptions{})
 			require.NoError(t, err)
-			keyProviderData := keySecret.Data[secrets.EncryptionSecretKMSProviderConfig]
-			require.NotEmpty(t, keyProviderData, "key secret %s missing kms-provider-config data", keyID)
-			keyProviderConfig, err := encoding.DecodeKMSConfig(keyProviderData)
+			keyPluginData := keySecret.Data[secrets.EncryptionSecretKMSPluginConfig]
+			require.NotEmpty(t, keyPluginData, "key secret %s missing kms-plugin-config data", keyID)
+			keyPluginConfig, err := encoding.DecodeKMSPluginConfig(keyPluginData)
 			require.NoError(t, err)
-			require.Equal(t, *keyProviderConfig, *providerConfig, "kms-provider-config for keyID %s in encryption-config secret does not match key secret", keyID)
+			require.Equal(t, keyPluginConfig, pluginConfig, "kms-plugin-config for keyID %s in encryption-config secret does not match key secret", keyID)
 		}
-		for keyID := range cfg.KMSProviders {
+		for keyID := range cfg.KMSPlugins {
 			if !expectedKeyIDs[keyID] {
-				t.Fatalf("unexpected kms-provider-config for keyID %s in encryption-config secret", keyID)
+				t.Fatalf("unexpected kms-plugin-config for keyID %s in encryption-config secret", keyID)
 			}
 		}
 	}
@@ -465,18 +465,18 @@ func TestEncryptionIntegration(tt *testing.T) {
 	)
 	waitForMigration("8")
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
-	verifyKMSProviders()
+	verifyKMSPlugins()
 
 	t.Logf("Verify KMS key secret contains provider config")
 	kmsKeySecret, err := kubeClient.CoreV1().Secrets("openshift-config-managed").Get(ctx, fmt.Sprintf("encryption-key-%s-8", component), metav1.GetOptions{})
 	require.NoError(t, err)
-	kmsProviderConfigData := kmsKeySecret.Data[secrets.EncryptionSecretKMSProviderConfig]
-	require.NotEmpty(t, kmsProviderConfigData, "expected kms-provider-config data to be present in key secret")
-	providerConfig, err := encoding.DecodeKMSConfig(kmsProviderConfigData)
+	kmsPluginConfigData := kmsKeySecret.Data[secrets.EncryptionSecretKMSPluginConfig]
+	require.NotEmpty(t, kmsPluginConfigData, "expected kms-plugin-config data to be present in key secret")
+	pluginConfig, err := encoding.DecodeKMSPluginConfig(kmsPluginConfigData)
 	require.NoError(t, err)
-	require.Equal(t, configv1.VaultKMSProvider, providerConfig.Type)
-	require.Equal(t, "https://vault.example.com", providerConfig.Vault.VaultAddress)
-	require.Equal(t, "test-transit-key", providerConfig.Vault.TransitKey)
+	require.Equal(t, configv1.VaultKMSProvider, pluginConfig.Type)
+	require.Equal(t, "https://vault.example.com", pluginConfig.Vault.VaultAddress)
+	require.Equal(t, "test-transit-key", pluginConfig.Vault.TransitKey)
 
 	t.Logf("Switch back to aescbc from KMS")
 	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"aescbc","kms":null}}}`), metav1.PatchOptions{})
@@ -488,7 +488,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 		fmt.Sprintf("kubeapiservers.operator.openshift.io=aescbc:9,kms:%s,identity;kubeschedulers.operator.openshift.io=aescbc:9,kms:%s,identity", kms8, kms8Sched),
 	)
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
-	verifyKMSProviders()
+	verifyKMSPlugins()
 
 	t.Logf("Switch back to KMS")
 	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS","kms":{"type":"Vault","vault":{"kmsPluginImage":"registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890","vaultAddress":"https://vault.example.com","authentication":{"type":"AppRole","appRole":{"secret":{"name":"vault-approle-secret"}}},"transitKey":"test-transit-key"}}}}}`), metav1.PatchOptions{})
@@ -503,7 +503,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 	)
 	waitForMigration("10")
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
-	verifyKMSProviders()
+	verifyKMSPlugins()
 
 	t.Logf("Rotate KMS key via aescbc (KMS->AESCBC->KMS)")
 	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"aescbc","kms":null}}}`), metav1.PatchOptions{})
@@ -515,7 +515,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 		fmt.Sprintf("kubeapiservers.operator.openshift.io=aescbc:11,kms:%s,identity;kubeschedulers.operator.openshift.io=aescbc:11,kms:%s,identity", kms10, kms10Sched),
 	)
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
-	verifyKMSProviders()
+	verifyKMSPlugins()
 
 	t.Logf("Switch back to KMS after rotation")
 	_, err = fakeApiServerClient.Patch(ctx, "cluster", types.MergePatchType, []byte(`{"spec":{"encryption":{"type":"KMS","kms":{"type":"Vault","vault":{"kmsPluginImage":"registry.example.com/kms-plugin@sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890","vaultAddress":"https://vault.example.com","authentication":{"type":"AppRole","appRole":{"secret":{"name":"vault-approle-secret"}}},"transitKey":"test-transit-key"}}}}}`), metav1.PatchOptions{})
@@ -530,7 +530,7 @@ func TestEncryptionIntegration(tt *testing.T) {
 	)
 	waitForMigration("12")
 	waitForConditionStatus("Encrypted", operatorv1.ConditionTrue)
-	verifyKMSProviders()
+	verifyKMSPlugins()
 
 	t.Logf("Delete the encryption-config while in KMS mode")
 	_, err = kubeClient.CoreV1().Secrets("openshift-config-managed").Patch(ctx, fmt.Sprintf("encryption-config-%s", component), types.JSONPatchType, []byte(`[{"op":"remove","path":"/metadata/finalizers"}]`), metav1.PatchOptions{})

@@ -67,7 +67,7 @@ func SetAndWaitForEncryptionType(t testing.TB, encryptionType configv1.Encryptio
 	if needsUpdate {
 		t.Logf("Updating encryption type in the config file for APIServer to %q", encryptionType)
 		apiServer.Spec.Encryption.Type = encryptionType
-		apiServer.Spec.Encryption.KMS = defaultTestKMSConfig(encryptionType)
+		apiServer.Spec.Encryption.KMS = defaultTestKMSPluginConfig(encryptionType)
 		_, err = clientSet.ApiServerConfig.Update(context.TODO(), apiServer, metav1.UpdateOptions{})
 		require.NoError(t, err)
 	} else {
@@ -341,13 +341,13 @@ func setUpTearDown(namespace string) func(testing.TB, bool) {
 	}
 }
 
-func defaultTestKMSConfig(encryptionType configv1.EncryptionType) *configv1.KMSConfig {
+func defaultTestKMSPluginConfig(encryptionType configv1.EncryptionType) configv1.KMSPluginConfig {
 	if encryptionType != configv1.EncryptionTypeKMS {
-		return nil
+		return configv1.KMSPluginConfig{}
 	}
-	return &configv1.KMSConfig{
+	return configv1.KMSPluginConfig{
 		Type: configv1.VaultKMSProvider,
-		Vault: configv1.VaultKMSConfig{
+		Vault: configv1.VaultKMSPluginConfig{
 			KMSPluginImage: kms.WellKnownUpstreamMockKMSPluginImage,
 			VaultAddress:   "https://vault.example.com",
 			Authentication: configv1.VaultAuthentication{

@@ -84,7 +84,7 @@ func TestEncryptionEnabledPrecondition(t *testing.T) {
 		{
 			name:                           "encryption off on previously KMS enabled cluster, with existing KMS key secret",
 			encryptionType:                 configv1.EncryptionTypeIdentity,
-			existingSecret:                 encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("oas", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+			existingSecret:                 encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("oas", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
 			expectedPreconditionsToBeReady: true,
 		},
 	}

@@ -594,7 +594,7 @@ func TestFromEncryptionState(t *testing.T) {
 			name:       "kms write key",
 			grs:        []schema.GroupResource{{Group: "", Resource: "secrets"}},
 			targetNs:   "kms",
-			writeKeyIn: encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
+			writeKeyIn: encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1),
 			makeOutput: func(writeKey *corev1.Secret, readKeys []*corev1.Secret) []apiserverconfigv1.ResourceConfiguration {
 				rs := apiserverconfigv1.ResourceConfiguration{}
 				rs.Resources = []string{"secrets"}
@@ -611,7 +611,7 @@ func TestFromEncryptionState(t *testing.T) {
 			name:       "kms write key and aescbc read key",
 			grs:        []schema.GroupResource{{Group: "", Resource: "secrets"}},
 			targetNs:   "kms",
-			writeKeyIn: encryptiontesting.CreateEncryptionKeySecretWithKMSConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
+			writeKeyIn: encryptiontesting.CreateEncryptionKeySecretWithKMSPluginConfig("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 2),
 			readKeysIn: []*corev1.Secret{
 				encryptiontesting.CreateEncryptionKeySecretWithRawKey("kms", []schema.GroupResource{{Group: "", Resource: "secrets"}}, 1, []byte("61def964fb967f5d7c44a2af8dab6865")),
 			},
@@ -708,7 +708,7 @@ func newFakeIdentityKeyForTest() []byte {
 	return make([]byte, 16)
 }
 
-func TestFromEncryptionStateKMSProviderConfigValidation(t *testing.T) {
+func TestFromEncryptionStateKMSPluginConfigValidation(t *testing.T) {
 	tests := []struct {
 		name            string
 		encryptionState map[schema.GroupResource]state.GroupResourceState
@@ -721,9 +721,9 @@ func TestFromEncryptionStateKMSProviderConfigValidation(t *testing.T) {
 					ReadKeys: []state.KeyState{{
 						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
 						Mode: state.KMS,
-						KMSConfig: &state.KMSConfig{
+						KMS: &state.KMSState{
 							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
-							Provider:   encryptiontesting.DefaultKMSProviderConfig,
+							Plugin:     encryptiontesting.DefaultKMSPluginConfig,
 						},
 					}},
 				},
@@ -731,9 +731,9 @@ func TestFromEncryptionStateKMSProviderConfigValidation(t *testing.T) {
 					ReadKeys: []state.KeyState{{
 						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
 						Mode: state.KMS,
-						KMSConfig: &state.KMSConfig{
+						KMS: &state.KMSState{
 							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
-							Provider:   encryptiontesting.DefaultKMSProviderConfig,
+							Plugin:     encryptiontesting.DefaultKMSPluginConfig,
 						},
 					}},
 				},
@@ -746,11 +746,11 @@ func TestFromEncryptionStateKMSProviderConfigValidation(t *testing.T) {
 					ReadKeys: []state.KeyState{{
 						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
 						Mode: state.KMS,
-						KMSConfig: &state.KMSConfig{
+						KMS: &state.KMSState{
 							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
-							Provider: &configv1.KMSConfig{
+							Plugin: configv1.KMSPluginConfig{
 								Type: configv1.VaultKMSProvider,
-								Vault: configv1.VaultKMSConfig{
+								Vault: configv1.VaultKMSPluginConfig{
 									VaultAddress: "https://vault-a.example.com",
 									TransitKey:   "key-a",
 								},
@@ -762,11 +762,11 @@ func TestFromEncryptionStateKMSProviderConfigValidation(t *testing.T) {
 					ReadKeys: []state.KeyState{{
 						Key:  apiserverconfigv1.Key{Name: "1", Secret: "AAAAAAAAAAAAAAAAAAAAAA=="},
 						Mode: state.KMS,
-						KMSConfig: &state.KMSConfig{
+						KMS: &state.KMSState{
 							Encryption: &apiserverconfigv1.KMSConfiguration{APIVersion: "v2", Name: "1", Endpoint: "unix:///var/run/kmsplugin/kms-1.sock"},
-							Provider: &configv1.KMSConfig{
+							Plugin: configv1.KMSPluginConfig{
 								Type: configv1.VaultKMSProvider,
-								Vault: configv1.VaultKMSConfig{
+								Vault: configv1.VaultKMSPluginConfig{
 									VaultAddress: "https://vault-b.example.com",
 									TransitKey:   "key-b",
 								},
@@ -775,7 +775,7 @@ func TestFromEncryptionStateKMSProviderConfigValidation(t *testing.T) {
 					}},
 				},
 			},
-			expectedErr: `KMS provider config mismatch for keyID 1: configs from different resources must be identical`,
+			expectedErr: `KMS plugin config mismatch for keyID 1: configs from different resources must be identical`,
 		},
 	}
 
@@ -846,8 +846,8 @@ func TestSecretRoundtrip(t *testing.T) {
 						}},
 					}},
 				},
-				KMSProviders: map[string]*configv1.KMSConfig{
-					"1": encryptiontesting.DefaultKMSProviderConfig,
+				KMSPlugins: map[string]configv1.KMSPluginConfig{
+					"1": encryptiontesting.DefaultKMSPluginConfig,
 				},
 			},
 		},
@@ -880,9 +880,9 @@ func TestSecretRoundtrip(t *testing.T) {
 						}},
 					}},
 				},
-				KMSProviders: map[string]*configv1.KMSConfig{
-					"1": encryptiontesting.DefaultKMSProviderConfig,
-					"2": encryptiontesting.DefaultKMSProviderConfig,
+				KMSPlugins: map[string]configv1.KMSPluginConfig{
+					"1": encryptiontesting.DefaultKMSPluginConfig,
+					"2": encryptiontesting.DefaultKMSPluginConfig,
 				},
 			},
 		},

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestKeyIDFromProviderConfigSecretDataKey(t *testing.T) {
+func TestKeyIDFromPluginConfigSecretDataKey(t *testing.T) {
 	tests := []struct {
 		name      string
 		dataKey   string
@@ -22,13 +22,13 @@ func TestKeyIDFromProviderConfigSecretDataKey(t *testing.T) {
 	}{
 		{
 			name:      "valid key",
-			dataKey:   "kms-provider-config-1",
+			dataKey:   "kms-plugin-config-1",
 			wantKeyID: "1",
 			wantFound: true,
 		},
 		{
 			name:      "valid key with large ID",
-			dataKey:   "kms-provider-config-42",
+			dataKey:   "kms-plugin-config-42",
 			wantKeyID: "42",
 			wantFound: true,
 		},
@@ -38,12 +38,12 @@ func TestKeyIDFromProviderConfigSecretDataKey(t *testing.T) {
 		},
 		{
 			name:      "non-integer keyID",
-			dataKey:   "kms-provider-config-abc",
+			dataKey:   "kms-plugin-config-abc",
 			wantError: true,
 		},
 		{
 			name:    "missing keyID",
-			dataKey: "kms-provider-config-",
+			dataKey: "kms-plugin-config-",
 		},
 		{
 			name:    "empty string",
@@ -53,7 +53,7 @@ func TestKeyIDFromProviderConfigSecretDataKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			keyID, found, err := KeyIDFromProviderConfigSecretDataKey(tt.dataKey)
+			keyID, found, err := KeyIDFromPluginConfigSecretDataKey(tt.dataKey)
 			if tt.wantError {
 				require.Error(t, err)
 				return
@@ -67,7 +67,7 @@ func TestKeyIDFromProviderConfigSecretDataKey(t *testing.T) {
 	}
 }
 
-func TestToProviderConfigSecretDataKeyFor(t *testing.T) {
+func TestToPluginConfigSecretDataKeyFor(t *testing.T) {
 	tests := []struct {
 		name      string
 		keyID     string
@@ -77,12 +77,12 @@ func TestToProviderConfigSecretDataKeyFor(t *testing.T) {
 		{
 			name:    "valid keyID",
 			keyID:   "1",
-			wantKey: "kms-provider-config-1",
+			wantKey: "kms-plugin-config-1",
 		},
 		{
 			name:    "valid large keyID",
 			keyID:   "42",
-			wantKey: "kms-provider-config-42",
+			wantKey: "kms-plugin-config-42",
 		},
 		{
 			name:      "non-integer keyID",
@@ -103,7 +103,7 @@ func TestToProviderConfigSecretDataKeyFor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ToProviderConfigSecretDataKeyFor(tt.keyID)
+			got, err := ToPluginConfigSecretDataKeyFor(tt.keyID)
 			if tt.wantError {
 				require.Error(t, err)
 				return

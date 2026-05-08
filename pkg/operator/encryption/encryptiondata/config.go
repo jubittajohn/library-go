@@ -27,9 +27,9 @@ var (
 // encryption state that doesn't fit into the upstream type.
 type Config struct {
 	Encryption *apiserverconfigv1.EncryptionConfiguration
-	// KMSProviders maps keyID to provider-specific configuration,
+	// KMSPlugins maps keyID to plugin-specific configuration,
 	// carried from Key Secrets into the encryption-config Secret.
-	KMSProviders map[string]*configv1.KMSConfig
+	KMSPlugins map[string]configv1.KMSPluginConfig
 }
 
 func (c *Config) HasEncryptionConfiguration() bool {
@@ -39,7 +39,7 @@ func (c *Config) HasEncryptionConfiguration() bool {
 // FromEncryptionState converts encryption state to Config.
 func FromEncryptionState(encryptionState map[schema.GroupResource]state.GroupResourceState) (*Config, error) {
 	resourceConfigs := make([]apiserverconfigv1.ResourceConfiguration, 0, len(encryptionState))
-	var kmsProviders map[string]*configv1.KMSConfig
+	var kmsPlugins map[string]configv1.KMSPluginConfig
 
 	for gr, grKeys := range encryptionState {
 		resourceConfigs = append(resourceConfigs, apiserverconfigv1.ResourceConfiguration{
@@ -47,24 +47,24 @@ func FromEncryptionState(encryptionState map[schema.GroupResource]state.GroupRes
 			Providers: stateToProviders(gr.Resource, grKeys),
 		})
 
-		// Collect KMS provider configs from read keys (which already include the write key).
+		// Collect KMS plugin configs from read keys (which already include the write key).
 		// We iterate over encryptionState which is keyed by GroupResource, so the same
 		// keyID is seen once per resource (e.g. key "1" for secrets and key "1" for configmaps).
-		// Since all resources share the same Key Secret, the provider config is identical
+		// Since all resources share the same Key Secret, the plugin config is identical
 		// across duplicates and we only need to keep the first occurrence.
 		for _, key := range grKeys.ReadKeys {
-			if key.HasKMSProvider() {
-				if kmsProviders == nil {
-					kmsProviders = map[string]*configv1.KMSConfig{}
+			if key.HasKMSPlugin() {
+				if kmsPlugins == nil {
+					kmsPlugins = map[string]configv1.KMSPluginConfig{}
 				}
-				if provider, exists := kmsProviders[key.Key.Name]; exists {
+				if plugin, exists := kmsPlugins[key.Key.Name]; exists {
 					// Sanity check: the same keyID seen from a different resource must carry
-					// an identical provider config, since they originate from the same Key Secret.
-					if !equality.Semantic.DeepEqual(provider, key.KMSConfig.Provider) {
-						return nil, fmt.Errorf("KMS provider config mismatch for keyID %s: configs from different resources must be identical", key.Key.Name)
+					// an identical plugin config, since they originate from the same Key Secret.
+					if !equality.Semantic.DeepEqual(plugin, key.KMS.Plugin) {
+						return nil, fmt.Errorf("KMS plugin config mismatch for keyID %s: configs from different resources must be identical", key.Key.Name)
 					}
 				} else {
-					kmsProviders[key.Key.Name] = key.KMSConfig.Provider
+					kmsPlugins[key.Key.Name] = key.KMS.Plugin
 				}
 			}
 		}
@@ -76,8 +76,8 @@ func FromEncryptionState(encryptionState map[schema.GroupResource]state.GroupRes
 	})
 
 	return &Config{
-		Encryption:   &apiserverconfigv1.EncryptionConfiguration{Resources: resourceConfigs},
-		KMSProviders: kmsProviders,
+		Encryption: &apiserverconfigv1.EncryptionConfiguration{Resources: resourceConfigs},
+		KMSPlugins: kmsPlugins,
 	}, nil
 }
 
@@ -252,11 +252,11 @@ func stateToProviders(resource string, desired state.GroupResourceState) []apise
 			})
 		case state.KMS:
 			if !key.HasKMSEncryption() {
-				klog.Infof("skipping key %s for %s in KMS mode as its either KMSConfig or KMSConfig.Encryption is nil", key.Key.Name, resource)
+				klog.Infof("skipping key %s for %s in KMS mode as its either KMS or KMS.Encryption is nil", key.Key.Name, resource)
 				continue // this should never happen
 			}
 			// In order to preserve the uniqueness, we should insert resource name
-			kmsCopy := key.KMSConfig.Encryption.DeepCopy()
+			kmsCopy := key.KMS.Encryption.DeepCopy()
 			kmsCopy.Name = createKMSProviderName(key.Key.Name, resource)
 			provider := apiserverconfigv1.ProviderConfiguration{
 				KMS: kmsCopy,

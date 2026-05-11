@@ -11,13 +11,19 @@ import (
 )
 
 var (
-	scheme = runtime.NewScheme()
-	codecs = serializer.NewCodecFactory(scheme)
+	scheme         = runtime.NewScheme()
+	codecs         = serializer.NewCodecFactory(scheme)
+	jsonSerializer runtime.Serializer
 )
 
 func init() {
 	utilruntime.Must(configv1.AddToScheme(scheme))
 	utilruntime.Must(apiserverconfigv1.AddToScheme(scheme))
+	info, ok := runtime.SerializerInfoForMediaType(codecs.SupportedMediaTypes(), runtime.ContentTypeJSON)
+	if !ok {
+		panic("json is not a supported media type")
+	}
+	jsonSerializer = info.Serializer
 }
 
 // EncodeEncryptionConfiguration serializes an EncryptionConfiguration to its serialized representation.
@@ -25,7 +31,7 @@ func EncodeEncryptionConfiguration(encryptionConfiguration *apiserverconfigv1.En
 	if encryptionConfiguration == nil {
 		return nil, fmt.Errorf("EncryptionConfiguration object cannot be nil")
 	}
-	encoder := codecs.LegacyCodec(apiserverconfigv1.SchemeGroupVersion)
+	encoder := codecs.EncoderForVersion(jsonSerializer, apiserverconfigv1.SchemeGroupVersion)
 	encryptionConfigurationData, err := runtime.Encode(encoder, encryptionConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode EncryptionConfiguration: %w", err)
@@ -85,7 +91,7 @@ func EncodeKMSPluginConfig(kmsConfig configv1.KMSPluginConfig) ([]byte, error) {
 			},
 		},
 	}
-	encoder := codecs.LegacyCodec(configv1.SchemeGroupVersion)
+	encoder := codecs.EncoderForVersion(jsonSerializer, configv1.SchemeGroupVersion)
 	pluginData, err := runtime.Encode(encoder, apiServerObj)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode KMS plugin config: %w", err)

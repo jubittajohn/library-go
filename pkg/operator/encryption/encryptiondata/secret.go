@@ -2,9 +2,13 @@ package encryptiondata
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 
 	configv1 "github.com/openshift/api/config/v1"
 
@@ -97,4 +101,47 @@ func ToSecret(ns, name string, secretData *Config) (*corev1.Secret, error) {
 	}
 
 	return s, nil
+}
+
+// ExtractUniqueAndSortedKMSConfigurations collects deduplicated KMS providers from the
+// EncryptionConfiguration, strips the resource suffix from each Name, and returns them
+// sorted by keyID descending. Duplicate keyIDs with mismatched config (ignoring Name) error out.
+func ExtractUniqueAndSortedKMSConfigurations(secretData *Config) ([]*apiserverconfigv1.KMSConfiguration, error) {
+	if !secretData.HasEncryptionConfiguration() {
+		return nil, fmt.Errorf("encryption configuration is required")
+	}
+	byKeyID := map[string]*apiserverconfigv1.KMSConfiguration{}
+	for _, resource := range secretData.Encryption.Resources {
+		for _, provider := range resource.Providers {
+			if provider.KMS == nil {
+				continue
+			}
+			keyID, err := getKeyIDFromPluginName(provider.KMS.Name)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse key ID from plugin name %q: %w", provider.KMS.Name, err)
+			}
+			if _, err := strconv.ParseUint(keyID, 10, 64); err != nil {
+				return nil, fmt.Errorf("key ID %q is not a valid integer: %w", keyID, err)
+			}
+			kmsCopy := provider.KMS.DeepCopy()
+			kmsCopy.Name = keyID
+			if existing, exists := byKeyID[keyID]; exists {
+				if !equality.Semantic.DeepEqual(existing, kmsCopy) {
+					return nil, fmt.Errorf("KMS configuration mismatch for keyID %s: configs from different resources must be identical", keyID)
+				}
+			}
+			byKeyID[keyID] = kmsCopy
+		}
+	}
+
+	result := make([]*apiserverconfigv1.KMSConfiguration, 0, len(byKeyID))
+	for _, v := range byKeyID {
+		result = append(result, v)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		iKeyID, _ := strconv.ParseUint(result[i].Name, 10, 64)
+		jKeyID, _ := strconv.ParseUint(result[j].Name, 10, 64)
+		return iKeyID > jKeyID
+	})
+	return result, nil
 }

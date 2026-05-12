@@ -88,7 +88,7 @@ var (
 						contactPerson("benluddy").
 						productScope(kubernetes).
 						enhancementPR("https://github.com/kubernetes/enhancements/issues/3962").
-						enable(inTechPreviewNoUpgrade(), inDevPreviewNoUpgrade()).
+						enable(inDefault(), inOKD(), inTechPreviewNoUpgrade(), inDevPreviewNoUpgrade()).
 						mustRegister()
 
 	FeatureGateOpenShiftPodSecurityAdmission = newFeatureGate("OpenShiftPodSecurityAdmission").
@@ -464,6 +464,14 @@ var (
 					enable(inClusterProfile(SelfManaged), inDevPreviewNoUpgrade(), inTechPreviewNoUpgrade()).
 					mustRegister()
 
+	FeatureGateOLMLifecycleAndCompatibility = newFeatureGate("OLMLifecycleAndCompatibility").
+								reportProblemsToJiraComponent("olm").
+								contactPerson("joelanford").
+								productScope(ocpSpecific).
+								enhancementPR("https://github.com/openshift/enhancements/pull/1991").
+								enable(inClusterProfile(SelfManaged), inTechPreviewNoUpgrade(), inDevPreviewNoUpgrade()).
+								mustRegister()
+
 	FeatureGateInsightsOnDemandDataGather = newFeatureGate("InsightsOnDemandDataGather").
 						reportProblemsToJiraComponent("insights").
 						contactPerson("tremes").
@@ -613,7 +621,6 @@ var (
 						enhancementPR(legacyFeatureGateWithoutEnhancement).
 						enable(inDefault(), inOKD(), inTechPreviewNoUpgrade(), inDevPreviewNoUpgrade()).
 						mustRegister()
-
 
 	FeatureGateVSphereMultiNetworks = newFeatureGate("VSphereMultiNetworks").
 					reportProblemsToJiraComponent("SPLAT").

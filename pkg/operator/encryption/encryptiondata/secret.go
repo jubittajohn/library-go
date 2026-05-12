@@ -46,6 +46,9 @@ func FromSecret(encryptionConfigSecret *corev1.Secret) (*Config, error) {
 		if kmsPlugins == nil {
 			kmsPlugins = map[string]configv1.KMSPluginConfig{}
 		}
+		if _, exists := kmsPlugins[keyID]; exists {
+			return nil, fmt.Errorf("duplicate KMS plugin config for keyID %s", keyID)
+		}
 		kmsPlugins[keyID] = pluginConfig
 	}
 
